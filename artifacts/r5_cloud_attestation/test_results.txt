@@ -1,0 +1,163 @@
+.venv\Scripts\python.exe : test_distinct_actions_can_have_only_one_growing_direction 
+(test_action_capacity.ActionCapacityTests.test_distinct_actions_can_have_only_one_growing_direction) ... ok
+En línea: 1 Carácter: 387
++ ... poiex-goc"; .venv\Scripts\python.exe -m unittest discover -s tests -v ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (test_distinct_a...rection) ... ok:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+test_finite_window_never_claims_unbounded_capacity 
+(test_action_capacity.ActionCapacityTests.test_finite_window_never_claims_unbounded_capacity) ... ok
+test_nonmonotone_rank_series_is_not_promoted_as_growing 
+(test_action_capacity.ActionCapacityTests.test_nonmonotone_rank_series_is_not_promoted_as_growing) ... ok
+test_distinct_effect_contracts_remain_distinct 
+(test_action_independence.ActionIndependenceTests.test_distinct_effect_contracts_remain_distinct) ... ok
+test_labels_do_not_create_independent_action_classes 
+(test_action_independence.ActionIndependenceTests.test_labels_do_not_create_independent_action_classes) ... ok
+test_provenance_cycle_blocks (test_authority_provenance.AuthorityProvenanceTests.test_provenance_cycle_blocks) ... ok
+test_required_provenance_missing_blocks_before_mutation 
+(test_authority_provenance.AuthorityProvenanceTests.test_required_provenance_missing_blocks_before_mutation) ... ok
+test_revoked_parent_provenance_blocks 
+(test_authority_provenance.AuthorityProvenanceTests.test_revoked_parent_provenance_blocks) ... ok
+test_trusted_delegation_chain_allows 
+(test_authority_provenance.AuthorityProvenanceTests.test_trusted_delegation_chain_allows) ... ok
+test_exact_dual_certificate_prunes_only_when_bound_exceeds_budget (test_certified_repair_pruning.CertifiedRepairPruning
+Tests.test_exact_dual_certificate_prunes_only_when_bound_exceeds_budget) ... ok
+test_feasible_dual_below_budget_cannot_prune_even_with_bad_heuristic (test_certified_repair_pruning.CertifiedRepairPrun
+ingTests.test_feasible_dual_below_budget_cannot_prune_even_with_bad_heuristic) ... ok
+test_invalid_dual_load_never_authorizes_pruning 
+(test_certified_repair_pruning.CertifiedRepairPruningTests.test_invalid_dual_load_never_authorizes_pruning) ... ok
+test_uncoverable_necessary_obligation_is_exact_infeasibility (test_certified_repair_pruning.CertifiedRepairPruningTests
+.test_uncoverable_necessary_obligation_is_exact_infeasibility) ... ok
+test_f_g1_epoch_mismatch_blocks (test_core_falsifiers.CoreFalsifierTests.test_f_g1_epoch_mismatch_blocks) ... ok
+test_f_g1_expired_authority_blocks (test_core_falsifiers.CoreFalsifierTests.test_f_g1_expired_authority_blocks) ... ok
+test_f_g1_out_of_scope_authority_blocks 
+(test_core_falsifiers.CoreFalsifierTests.test_f_g1_out_of_scope_authority_blocks) ... ok
+test_f_g1_revoked_authority_blocks_with_zero_mutation 
+(test_core_falsifiers.CoreFalsifierTests.test_f_g1_revoked_authority_blocks_with_zero_mutation) ... ok
+test_f_g2_self_claim_never_promotes_to_observed 
+(test_core_falsifiers.CoreFalsifierTests.test_f_g2_self_claim_never_promotes_to_observed) ... ok
+test_f_g3_stale_target_version_blocks (test_core_falsifiers.CoreFalsifierTests.test_f_g3_stale_target_version_blocks) 
+... ok
+test_f_g3_wrong_target_hash_blocks (test_core_falsifiers.CoreFalsifierTests.test_f_g3_wrong_target_hash_blocks) ... ok
+test_f_g4_complete_replay_passes (test_core_falsifiers.CoreFalsifierTests.test_f_g4_complete_replay_passes) ... ok
+test_f_g4_missing_predecessor_fails_replay 
+(test_core_falsifiers.CoreFalsifierTests.test_f_g4_missing_predecessor_fails_replay) ... ok
+test_positive_control_allows_bounded_synthetic_action 
+(test_core_falsifiers.CoreFalsifierTests.test_positive_control_allows_bounded_synthetic_action) ... ok
+test_binding_change_invalidates_legacy_artifact (test_cross_lane_governance_hardening.CrossLaneGovernanceHardeningTests
+.test_binding_change_invalidates_legacy_artifact) ... ok
+test_control_service_exposes_bounded_hardening_endpoint (test_cross_lane_governance_hardening.CrossLaneGovernanceHarden
+ingTests.test_control_service_exposes_bounded_hardening_endpoint) ... 
+<workspace> 
+StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+  from starlette.testclient import TestClient as TestClient  # noqa
+ok
+test_existing_world_does_not_fake_registry_expansion (test_cross_lane_governance_hardening.CrossLaneGovernanceHardening
+Tests.test_existing_world_does_not_fake_registry_expansion) ... ok
+test_frozen_hardening_demo_cases_emit_expected_statuses (test_cross_lane_governance_hardening.CrossLaneGovernanceHarden
+ingTests.test_frozen_hardening_demo_cases_emit_expected_statuses) ... ok
+test_history_write_without_readback_is_not_operational_memory (test_cross_lane_governance_hardening.CrossLaneGovernance
+HardeningTests.test_history_write_without_readback_is_not_operational_memory) ... ok
+test_memory_readback_requires_matched_state_future_split (test_cross_lane_governance_hardening.CrossLaneGovernanceHarde
+ningTests.test_memory_readback_requires_matched_state_future_split) ... ok
+test_new_independent_evidence_root_can_support_progress (test_cross_lane_governance_hardening.CrossLaneGovernanceHarden
+ingTests.test_new_independent_evidence_root_can_support_progress) ... ok
+test_new_rival_reopens_global_coverage_but_not_unchanged_local_pair (test_cross_lane_governance_hardening.CrossLaneGove
+rnanceHardeningTests.test_new_rival_reopens_global_coverage_but_not_unchanged_local_pair) ... ok
+test_observer_only_change_cannot_mint_progress (test_cross_lane_governance_hardening.CrossLaneGovernanceHardeningTests.
+test_observer_only_change_cannot_mint_progress) ... ok
+test_same_binding_preserves_artifact_locally 
+(test_cross_lane_governance_hardening.CrossLaneGovernanceHardeningTests.test_same_binding_preserves_artifact_locally) 
+... ok
+test_stale_stage_input_blocks_without_noninterference_certificate (test_cross_lane_governance_hardening.CrossLaneGovern
+anceHardeningTests.test_stale_stage_input_blocks_without_noninterference_certificate) ... ok
+test_verified_noninterference_can_admit_equivalent_stage_input (test_cross_lane_governance_hardening.CrossLaneGovernanc
+eHardeningTests.test_verified_noninterference_can_admit_equivalent_stage_input) ... ok
+test_control_plane_allows_and_replays_with_adapter_contract (test_firestore_store_contract.FirestoreStoreContractTests.
+test_control_plane_allows_and_replays_with_adapter_contract) ... ok
+test_firestore_adapter_preserves_provenance_enforcement 
+(test_firestore_store_contract.FirestoreStoreContractTests.test_firestore_adapter_preserves_provenance_enforcement) 
+... ok
+test_missing_document_returns_none 
+(test_firestore_store_contract.FirestoreStoreContractTests.test_missing_document_returns_none) ... ok
+test_revoked_authority_blocks_without_synthetic_action_document (test_firestore_store_contract.FirestoreStoreContractTe
+sts.test_revoked_authority_blocks_without_synthetic_action_document) ... ok
+test_round_trips_agent_evidence_lease_and_target 
+(test_firestore_store_contract.FirestoreStoreContractTests.test_round_trips_agent_evidence_lease_and_target) ... ok
+test_round_trips_authority_provenance 
+(test_firestore_store_contract.FirestoreStoreContractTests.test_round_trips_authority_provenance) ... ok
+test_synthetic_result_hash_is_verified_on_replay 
+(test_firestore_store_contract.FirestoreStoreContractTests.test_synthetic_result_hash_is_verified_on_replay) ... ok
+test_tampered_target_document_is_rejected_on_read 
+(test_firestore_store_contract.FirestoreStoreContractTests.test_tampered_target_document_is_rejected_on_read) ... ok
+test_censored_and_never_event_are_not_collapsed 
+(test_future_state_sufficiency.FutureStateSufficiencyTests.test_censored_and_never_event_are_not_collapsed) ... ok
+test_identical_declared_kernels_are_safe_only_for_declared_contract (test_future_state_sufficiency.FutureStateSufficien
+cyTests.test_identical_declared_kernels_are_safe_only_for_declared_contract) ... ok
+test_same_present_state_with_rival_future_kernels_is_unsafe (test_future_state_sufficiency.FutureStateSufficiencyTests.
+test_same_present_state_with_rival_future_kernels_is_unsafe) ... ok
+test_cloud_run_refuses_ephemeral_memory_store 
+(test_goc_orchestrator.GOCOrchestratorTests.test_cloud_run_refuses_ephemeral_memory_store) ... ok
+test_end_to_end_governed_proposal_allows_and_replays 
+(test_goc_orchestrator.GOCOrchestratorTests.test_end_to_end_governed_proposal_allows_and_replays) ... ok
+test_firestore_mode_passes_explicit_cloud_configuration 
+(test_goc_orchestrator.GOCOrchestratorTests.test_firestore_mode_passes_explicit_cloud_configuration) ... ok
+test_planner_cannot_substitute_domain_authorized_target 
+(test_goc_orchestrator.GOCOrchestratorTests.test_planner_cannot_substitute_domain_authorized_target) ... ok
+test_cloud_demo_cases_are_governed 
+(test_google_deployment_closure.GoogleDeploymentClosureTests.test_cloud_demo_cases_are_governed) ... ok
+test_cloudshell_apply_bootstraps_agents_cli_without_embedding_credentials (test_google_deployment_closure.GoogleDeploym
+entClosureTests.test_cloudshell_apply_bootstraps_agents_cli_without_embedding_credentials) ... ok
+test_cloudshell_bootstrap_exists_and_defaults_fail_closed_to_plan (test_google_deployment_closure.GoogleDeploymentClosu
+reTests.test_cloudshell_bootstrap_exists_and_defaults_fail_closed_to_plan) ... ok
+test_cloudshell_execution_doc_exists 
+(test_google_deployment_closure.GoogleDeploymentClosureTests.test_cloudshell_execution_doc_exists) ... ok
+test_control_service_is_synthetic_only_and_store_factory_bound (test_google_deployment_closure.GoogleDeploymentClosureT
+ests.test_control_service_is_synthetic_only_and_store_factory_bound) ... ok
+test_control_service_local_http_contract_and_cloud_fail_closed (test_google_deployment_closure.GoogleDeploymentClosureT
+ests.test_control_service_local_http_contract_and_cloud_fail_closed) ... ok
+test_default_gemini_model_is_contest_eligible 
+(test_google_deployment_closure.GoogleDeploymentClosureTests.test_default_gemini_model_is_contest_eligible) ... ok
+test_deploy_binds_contest_model_and_locks_privileged_control (test_google_deployment_closure.GoogleDeploymentClosureTes
+ts.test_deploy_binds_contest_model_and_locks_privileged_control) ... ok
+test_deployment_scaffolding_occurs_in_disposable_git_worktree (test_google_deployment_closure.GoogleDeploymentClosureTe
+sts.test_deployment_scaffolding_occurs_in_disposable_git_worktree) ... ok
+test_generated_google_closure_artifacts_do_not_dirty_canonical_repo (test_google_deployment_closure.GoogleDeploymentClo
+sureTests.test_generated_google_closure_artifacts_do_not_dirty_canonical_repo) ... ok
+test_owner_closure_scripts_exist 
+(test_google_deployment_closure.GoogleDeploymentClosureTests.test_owner_closure_scripts_exist) ... ok
+test_owner_preflight_uses_current_agents_cli_interface 
+(test_google_deployment_closure.GoogleDeploymentClosureTests.test_owner_preflight_uses_current_agents_cli_interface) 
+... ok
+test_project_build_declares_explicit_package_discovery 
+(test_google_deployment_closure.GoogleDeploymentClosureTests.test_project_build_declares_explicit_package_discovery) 
+... ok
+test_project_name_fits_agents_cli_limit_and_matches_manifest (test_google_deployment_closure.GoogleDeploymentClosureTes
+ts.test_project_name_fits_agents_cli_limit_and_matches_manifest) ... ok
+test_required_google_runtime_dependencies_are_not_optional (test_google_deployment_closure.GoogleDeploymentClosureTests
+.test_required_google_runtime_dependencies_are_not_optional) ... ok
+test_adk_scaffold_contains_specialized_advisory_fleet 
+(test_planner_boundary.PlannerBoundaryTests.test_adk_scaffold_contains_specialized_advisory_fleet) ... ok
+test_adk_scaffold_exposes_zero_material_tools 
+(test_planner_boundary.PlannerBoundaryTests.test_adk_scaffold_exposes_zero_material_tools) ... ok
+test_coordinator_fails_closed_when_required_specialist_routing_fails 
+(test_planner_boundary.PlannerBoundaryTests.test_coordinator_fails_closed_when_required_specialist_routing_fails) ... 
+ok
+test_planner_proposal_cannot_mint_authority_or_target_hash_fields 
+(test_planner_boundary.PlannerBoundaryTests.test_planner_proposal_cannot_mint_authority_or_target_hash_fields) ... ok
+test_trusted_layer_binds_current_target_hash 
+(test_planner_boundary.PlannerBoundaryTests.test_trusted_layer_binds_current_target_hash) ... ok
+test_trusted_layer_rejects_planner_target_substitution 
+(test_planner_boundary.PlannerBoundaryTests.test_trusted_layer_rejects_planner_target_substitution) ... ok
+test_fault_matrix_fails_closed_or_detects_tamper 
+(test_receiver_native_fault_harness.ReceiverNativeFaultHarnessTests.test_fault_matrix_fails_closed_or_detects_tamper) 
+... ok
+test_report_does_not_claim_external_validation 
+(test_receiver_native_fault_harness.ReceiverNativeFaultHarnessTests.test_report_does_not_claim_external_validation) 
+... ok
+
+----------------------------------------------------------------------
+Ran 73 tests in 1.905s
+
+OK

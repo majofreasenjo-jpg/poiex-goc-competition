@@ -1,0 +1,6 @@
+  num_cases_total: 13
+  num_cases_valid: 10
+  num_cases_error: 3
+  mean_score: 0.8357
+  pass_rate: 0.7000
+inference_completion=13/13 (agents-cli eval generate, gemini-3.7-flash, all case[0..12] done)

@@ -1,0 +1,70 @@
+{
+  "case_count": 5,
+  "cases": [
+    {
+      "artifact_valid": false,
+      "case": "binding_change",
+      "method_transfer_not_evidence_transfer": true,
+      "reasons": [
+        "SEMANTIC_BINDING_CHANGED",
+        "LEGACY_ARTIFACT_INVALID_FOR_FINAL_DISPOSITION",
+        "RECOMPUTATION_REQUIRED"
+      ],
+      "schema": "GOC_CROSS_LANE_HARDENING_V0_10",
+      "status": "INVALIDATE_AND_RECOMPUTE",
+      "truth_ceiling": "SYNTHETIC_RECEIVER_NATIVE_ONLY"
+    },
+    {
+      "case": "write_only_memory",
+      "claim_ceiling": "DECLARED_MATCHED_STATE_KERNEL_ONLY",
+      "load_bearing_readback_observed": false,
+      "method_transfer_not_evidence_transfer": true,
+      "schema": "GOC_CROSS_LANE_HARDENING_V0_10",
+      "status": "READBACK_NOT_DEMONSTRATED",
+      "truth_ceiling": "SYNTHETIC_RECEIVER_NATIVE_ONLY"
+    },
+    {
+      "case": "stale_stage_input",
+      "method_transfer_not_evidence_transfer": true,
+      "reasons": [
+        "STAGE_INPUT_DIFFERS_FROM_RECEIPTED_PREDECESSOR_OUTPUT",
+        "NONINTERFERENCE_NOT_CERTIFIED"
+      ],
+      "schema": "GOC_CROSS_LANE_HARDENING_V0_10",
+      "stage_input_admissible": false,
+      "status": "STALE_STAGE_INPUT_BLOCK",
+      "truth_ceiling": "SYNTHETIC_RECEIVER_NATIVE_ONLY"
+    },
+    {
+      "admissible_progress_units": 0,
+      "case": "observer_reparameterization",
+      "method_transfer_not_evidence_transfer": true,
+      "reasons": [
+        "PURE_OBSERVER_REPARAMETERIZATION",
+        "OBSERVER_CONFIG_CHANGE_CANNOT_MINT_PROGRESS"
+      ],
+      "schema": "GOC_CROSS_LANE_HARDENING_V0_10",
+      "status": "NONMINT_VIOLATION",
+      "truth_ceiling": "SYNTHETIC_RECEIVER_NATIVE_ONLY"
+    },
+    {
+      "case": "new_rival",
+      "locally_invalidated_certificates": [],
+      "locally_preserved_certificates": [
+        "pair-A-B"
+      ],
+      "method_transfer_not_evidence_transfer": true,
+      "reasons": [
+        "NEW_ADMISSIBLE_RIVAL",
+        "REGISTERED_COVERAGE_NOT_REALITY_CLOSURE",
+        "LOCAL_CERTIFICATES_PRESERVED_WITHIN_DECLARED_SCOPE"
+      ],
+      "schema": "GOC_CROSS_LANE_HARDENING_V0_10",
+      "status": "GLOBAL_REGISTRY_REOPENED",
+      "truth_ceiling": "SYNTHETIC_RECEIVER_NATIVE_ONLY"
+    }
+  ],
+  "method_transfer_not_evidence_transfer": true,
+  "schema": "GOC_V0_10_CROSS_LANE_HARDENING_EVIDENCE",
+  "truth_ceiling": "LOCAL_SYNTHETIC_RECEIVER_NATIVE_ONLY"
+}

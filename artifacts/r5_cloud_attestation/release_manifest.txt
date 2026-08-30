@@ -1,0 +1,15 @@
+POIEX/GOC R5 RELEASE MANIFEST
+release_tag=v0.11.0-rc1-contest-cloud-attested
+commit=164ffb2f75ea56582953d3a12f5fe901e1406568
+project=poiex-goc-fortified-2026 (number 496902602044) region=us-east1
+effective_gemini_model=gemini-3.7-flash (verified in runtime modelVersion; global GenAI location)
+fleet_revision=poiex-agent-fleet-00008-g4l  image=sha256:50d74ced980d37355f0f4641789fedf63257a8845ed9ae8e6e0bbb04d601dcbc
+control_revision=poiex-goc-control-00005-jdf  image=sha256:e0a66051593b3e0b43956d9cf2d7ed6278e38ced301441ec90b74508f9b37e74
+fleet_public=TRUE (advisory demo surface, tools=[])  control_public=FALSE (privileged, authenticated only)
+local_tests=73/73 GREEN  staged_tests=73/73 GREEN (clean-clone)
+deployed_falsifiers=16 PASS / 0 FAIL / 6 NOT_EVIDENCED
+inference_completion=13/13  autorater=RAN (10/13 valid, mean 0.836; 3 evaluator parse-errors, not agent failures)
+
+IMAGE-vs-TAG binding note:
+  control image built from b20489a == V0.11 control code exactly (control_service/main.py unchanged in R5) -> EXACT.
+  fleet image built from b20489a; R5 fleet delta = adk_planner DEFAULT_GEMINI_MODEL string only, which is INERT because GEMINI_MODEL=gemini-3.7-flash is set explicitly on the service env. Effective runtime = V0.11 (modelVersion=gemini-3.7-flash verified). A fresh deploy from this tag rebuilds byte-current.

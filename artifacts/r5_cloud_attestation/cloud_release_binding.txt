@@ -1,0 +1,5 @@
+poiex-agent-fleet | rev=poiex-agent-fleet-00008-g4l | url=https://poiex-agent-fleet-unz7hjermq-ue.a.run.app | sa=poiex-goc-runtime@poiex-goc-fortified-2026.iam.gserviceaccount.com
+  image=us-east1-docker.pkg.dev/poiex-goc-fortified-2026/cloud-run-source-deploy/poiex-agent-fleet@sha256:50d74ced980d37355f0f4641789fedf63257a8845ed9ae8e6e0bbb04d601dcbc
+poiex-goc-control | rev=poiex-goc-control-00005-jdf | url=https://poiex-goc-control-unz7hjermq-ue.a.run.app | sa=poiex-goc-runtime@poiex-goc-fortified-2026.iam.gserviceaccount.com
+  image=us-east1-docker.pkg.dev/poiex-goc-fortified-2026/cloud-run-source-deploy/poiex-goc-control@sha256:e0a66051593b3e0b43956d9cf2d7ed6278e38ced301441ec90b74508f9b37e74
+commit_HEAD=164ffb2f75ea56582953d3a12f5fe901e1406568

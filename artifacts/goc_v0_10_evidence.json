@@ -1,0 +1,15 @@
+{
+  "cloud_hardening_endpoint": "/v1/hardening/run",
+  "competition_native_routing_gate": "ABSTAIN_SPECIALIST_FAILURE",
+  "credentialed_adk_gemini_evidence": false,
+  "deployed_cloud_evidence": false,
+  "eval_cases_prepared": 13,
+  "go_review": 0,
+  "hardening_cases": 5,
+  "real_firestore_evidence": false,
+  "schema": "GOC_V0_10_CROSS_LANE_HARDENING_SUMMARY",
+  "tested_code_commit": "6e3a155a3c1a5eac04cd0380af86df5a8fbd0cd4",
+  "tests_failed": 0,
+  "tests_passed": 68,
+  "truth_ceiling": "LOCAL_ONLY_DEPLOYED_RERUN_REQUIRED"
+}

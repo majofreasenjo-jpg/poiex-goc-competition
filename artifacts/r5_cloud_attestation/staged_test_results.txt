@@ -1,0 +1,7 @@
+........................<workspace> StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+  from starlette.testclient import TestClient as TestClient  # noqa
+.................................................
+----------------------------------------------------------------------
+Ran 73 tests in 16.044s
+
+OK

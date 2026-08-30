@@ -1,0 +1,32 @@
+flowchart LR
+    WO[Synthetic Maintenance Mission] --> PC[ADK Planning Coordinator\nGemini 3.7 Flash]
+    PC --> RS[Registry Steward\nadvisory only]
+    PC --> AS[Authority Steward\nadvisory only]
+    PC --> TS[Target Steward\nadvisory only]
+    PC --> FZ[Falsifier Steward\nadvisory only]
+    RS --> PP[PlannerProposal]
+    AS --> PP
+    TS --> PP
+    FZ --> PP
+    PP --> TB[Trusted Proposal Binder\nDomain-authorized target]
+    TB --> AI[ActionIntent]
+    AI --> ID[Identity Gate]
+    ID --> AR[Agent Registry\nDECLARED != OBSERVED]
+    AR --> AL[AuthorityLease Gate]
+    AL --> AP[Authority Provenance\nDelegation / Revocation / Trusted Root]
+    AP --> TI[Exact Target Interlock]
+    TI --> EX[Synthetic Reversible Executor]
+    EX --> RC[ExecutionReceipt]
+    RC --> RP[Replay / Observability]
+    RP --> FH[Receiver-native Fault Harness]
+    FH --> PF[Promote / Repair / Rollback / Abstain]
+    ST[RuntimeStore Contract] --- AR
+    ST --- AL
+    ST --- AP
+    ST --- TI
+    ST --- RC
+    MS[(MemoryStore\nlocal only)] -.-> ST
+    FS[(FirestoreStore\ncloud target)] -.-> ST
+    CR[Cloud Run target] --- PC
+    CR --- ID
+    CR --- EX

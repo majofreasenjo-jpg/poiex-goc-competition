@@ -1,0 +1,20 @@
+POIEX/GOC R5 canonical git identity
+date_utc=2026-08-30
+branch=main
+HEAD_commit=164ffb2f75ea56582953d3a12f5fe901e1406568
+consolidated_history: v0.10.1 (Claude) -> v0.10.2..v0.10.5 (Antigravity live-deploy fixes) -> R5 fix (164ffb2)
+
+164ffb2 (HEAD -> main) fix(r5): bind contest-eligible Gemini and lock the privileged control plane
+b20489a (tag: v0.10.5-local-google-preflight-green) Use gemini-2.5-flash in us-central1 to fix regional Model Garden limitations
+fb233a0 (tag: v0.10.4-local-google-preflight-green) Make Cloud Run endpoints public to allow live evaluation, change healthz route to health to avoid GFE interception
+0bc0fc0 (tag: v0.10.3-local-google-preflight-green) Use uv run uvicorn for control service entrypoint command to resolve binary inside container
+c2567cb (tag: v0.10.2-local-google-preflight-green) Patch google_deploy_cloud_run.sh to copy poiex_runtime and control_service packages during Docker build to avoid ModuleNotFoundError inside the container
+6254c44 (tag: v0.10.1-local-google-preflight-green) docs: seal Claude preflight evidence package and Antigravity handoff
+66331a9 evidence: refresh v0.10.1 final local tests at the sealed tested-code head
+efcc606 evidence: seal v0.10.1 repairs (71/71 local green, staged 71/71 green)
+4c81f39 fix: accept scaffold-extended google-adk extras in dependency gate
+e95a946 fix: rename project to poiex-goc-google-runtime within the CLI limit
+d7ccd73 test: require project name within the agents-cli 26-character limit
+7c85103 fix: declare explicit package discovery so the staged worktree builds
+
+author_identity: Manuel <majofreasenjo@gmail.com>

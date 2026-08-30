@@ -1,0 +1,18 @@
+POIEX/GOC R5-02 — EFFECTIVE GEMINI MODEL EVIDENCE
+effective_model_id      = gemini-3.7-flash   (from runtime response "modelVersion")
+model_configured        = gemini-3.7-flash   (adk_planner default + service env GEMINI_MODEL)
+contest_eligibility     = PASS (Gemini >= 3.5; empirically served only via Vertex location=global in this project)
+project                 = poiex-goc-fortified-2026
+service                 = poiex-agent-fleet
+service_revision        = poiex-agent-fleet-00008-g4l
+service_region          = us-east1
+genai_location          = global (GOOGLE_CLOUD_LOCATION)
+vertex                  = GOOGLE_GENAI_USE_VERTEXAI=TRUE
+agents_observed         = poiex_planning_coordinator -> registry_steward (live delegation)
+response_totalTokenCount= 1585 (trafficType ON_DEMAND)
+prior_state_v0_10_5     = gemini-2.5-flash in us-central1 (NON-eligible) -> corrected
+region_availability_probe:
+  us-east1     gemini-3.7-flash=404  gemini-3.5-flash=404  gemini-2.5-flash=200
+  us-central1  gemini-3.7-flash=404  gemini-3.5-flash=404  gemini-2.5-flash=200
+  global       gemini-3.7-flash=200  gemini-3.5-flash=200  gemini-2.5-flash=200
+MODEL_CONFIGURED == MODEL_EFFECTIVE (both gemini-3.7-flash, verified in runtime metadata)

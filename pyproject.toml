@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "poiex-goc-google-runtime"
+version = "0.10.0"
+description = "Clean-room GOC governed control plane and advisory ADK fleet for the POIEX Google All Things Agentic attack runtime"
+requires-python = ">=3.11"
+dependencies = [
+  "google-adk[gcp]>=2.0.0,<3.0.0",
+  "google-cloud-firestore>=2.20.0",
+  "fastapi>=0.115.0,<1.0.0",
+  "uvicorn[standard]>=0.30.0,<1.0.0",
+]
+
+[tool.setuptools.packages.find]
+include = ["app*", "control_service*", "poiex_runtime*"]

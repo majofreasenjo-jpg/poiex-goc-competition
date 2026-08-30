@@ -1,0 +1,13 @@
+{
+  "bindings": [
+    {
+      "members": [
+        "allUsers",
+        "user:majofreasenjo@gmail.com"
+      ],
+      "role": "roles/run.invoker"
+    }
+  ],
+  "etag": "BwZaOxZa-MY=",
+  "version": 1
+}
