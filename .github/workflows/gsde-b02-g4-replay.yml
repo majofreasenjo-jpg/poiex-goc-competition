@@ -30,21 +30,35 @@ jobs:
       - name: Install dependencies
         run: pip install -r gsde-b02/requirements.txt
 
-      - name: Run custody + preregistered replay
+      - name: Run frozen custody + preregistered replay
         run: python gsde-b02/gsde_b02_remote_benchmark.py --raw-dir gsde-b02/raw --out-dir gsde-b02/artifacts
+
+      - name: Run post-FAIL exploratory engine forensics
+        run: python gsde-b02/gsde_b02_forensics.py --raw-dir gsde-b02/raw --out-dir gsde-b02/forensics-artifacts
 
       - name: Hash result artifacts
         if: always()
         run: |
-          mkdir -p gsde-b02/artifacts
+          mkdir -p gsde-b02/artifacts gsde-b02/forensics-artifacts
           find gsde-b02/artifacts -maxdepth 1 -type f -print0 | sort -z | xargs -0 -r sha256sum > gsde-b02/artifacts/ARTIFACT_SHA256SUMS.txt
+          find gsde-b02/forensics-artifacts -maxdepth 1 -type f -print0 | sort -z | xargs -0 -r sha256sum > gsde-b02/forensics-artifacts/FORENSICS_SHA256SUMS.txt
           cat gsde-b02/artifacts/ARTIFACT_SHA256SUMS.txt
+          cat gsde-b02/forensics-artifacts/FORENSICS_SHA256SUMS.txt
 
-      - name: Upload replay evidence
+      - name: Upload frozen replay evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: gsde-b02-g4-replay-evidence
           path: gsde-b02/artifacts/
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Upload post-FAIL exploratory forensics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gsde-b02-g4-post-fail-forensics
+          path: gsde-b02/forensics-artifacts/
           if-no-files-found: warn
           retention-days: 90
