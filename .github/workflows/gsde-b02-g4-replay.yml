@@ -1,0 +1,50 @@
+name: GSDE B02 G4 Replay
+
+on:
+  push:
+    branches:
+      - gsde-b02-g4-replay-20260902
+    paths:
+      - 'gsde-b02/**'
+      - '.github/workflows/gsde-b02-g4-replay.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: gsde-b02/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r gsde-b02/requirements.txt
+
+      - name: Run custody + preregistered replay
+        run: python gsde-b02/gsde_b02_remote_benchmark.py --raw-dir gsde-b02/raw --out-dir gsde-b02/artifacts
+
+      - name: Hash result artifacts
+        if: always()
+        run: |
+          mkdir -p gsde-b02/artifacts
+          find gsde-b02/artifacts -maxdepth 1 -type f -print0 | sort -z | xargs -0 -r sha256sum > gsde-b02/artifacts/ARTIFACT_SHA256SUMS.txt
+          cat gsde-b02/artifacts/ARTIFACT_SHA256SUMS.txt
+
+      - name: Upload replay evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gsde-b02-g4-replay-evidence
+          path: gsde-b02/artifacts/
+          if-no-files-found: warn
+          retention-days: 90
