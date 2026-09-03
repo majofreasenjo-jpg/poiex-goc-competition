@@ -1,0 +1,88 @@
+name: GSDE P17 G4.9A Spot Sync Observation Gate
+
+on:
+  push:
+    branches:
+      - gsde-p17-g49a-spot-sync-20260903
+    paths:
+      - 'gsde-p17/**'
+      - '.github/workflows/gsde-p17-g49a-spot-sync.yml'
+
+jobs:
+  spot-sync-observation-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install numpy pandas
+      - name: Download Spot-only authoritative sources from NIST and verify hashes
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p g49a/source g49a/images g49a/out
+          python - <<'PY'
+          from pathlib import Path
+          from urllib.request import Request, urlopen
+          from urllib.parse import quote
+          import hashlib
+
+          base = 'https://data.nist.gov/od/ds/mds2-2525/'
+          files = {
+            '2525_README_v200.txt': '936f4c166b448f4b5a27d1e2b2465f9c2db1be073a7bffd54d45eb4259120a65',
+            'Data Synchronization Example.ipynb': '7db1c0bdf7030d2db41f247e0942af03f1aeacbc55d585d5c866793b6ab02a1f',
+            'Spot on Bare Metal_Calibrated Absorption Data.csv': '0e96b220852d762fde846e406cc44c6fc874cef22e7e41db7f4025dbcc9ca274',
+            'Spot on Bare Metal_XrayImages_processed_captioned.zip': '4d683cf48c4a15458d60dd32b759528a672ba1d6908cc537c43c9e25854c2a98',
+          }
+          for name, expected in files.items():
+              p = Path('g49a/source') / name
+              req = Request(base + quote(name), headers={'User-Agent':'Mozilla/5.0 GSDE scientific replay'})
+              with urlopen(req, timeout=120) as r, p.open('wb') as f:
+                  while True:
+                      b = r.read(1024*1024)
+                      if not b:
+                          break
+                      f.write(b)
+              h = hashlib.sha256(p.read_bytes()).hexdigest()
+              if h != expected:
+                  raise SystemExit(f'CHECKSUM FAIL {name}: {h} != {expected}')
+          PY
+      - name: Prove Scan holdout untouched
+        shell: bash
+        run: |
+          set -euo pipefail
+          if find g49a -type f -iname 'Scan on Bare Metal*' | grep -q .; then
+            echo 'HOLDOUT BREACH: Scan file materialized' >&2
+            exit 9
+          fi
+          printf 'SCAN_HOLDOUT_DOWNLOADED=FALSE\nSCAN_HOLDOUT_INSPECTED=FALSE\n' > g49a/out/SCAN_HOLDOUT_SEAL.txt
+      - name: Extract Spot processed X-ray images
+        run: unzip -q 'g49a/source/Spot on Bare Metal_XrayImages_processed_captioned.zip' -d g49a/images
+      - name: Execute exact frame-time map and observation gate
+        run: python gsde-p17/g49a_spot_sync_observation_gate.py g49a/source g49a/images g49a/out
+      - name: Hard gate expected observed domain
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q '^G4_9A_SPOT_FRAME_TIME_MAPPING=CLOSED_MATERIAL$' g49a/out/G49A_ADJUDICATION.txt
+          grep -q '^SPOT_PROCESSED_IMAGE_SET_080_227_EXACT=TRUE$' g49a/out/G49A_ADJUDICATION.txt
+          grep -q '^SPOT_DEVELOPMENT_MAPPING_080_227_ALL_PASS=TRUE$' g49a/out/G49A_ADJUDICATION.txt
+          grep -q '^SCAN_HOLDOUT_DOWNLOADED=FALSE$' g49a/out/G49A_ADJUDICATION.txt
+      - name: Record execution context
+        run: |
+          {
+            echo "GITHUB_SHA=$GITHUB_SHA"
+            echo "GITHUB_REF=$GITHUB_REF"
+            python --version
+            pip freeze
+          } > g49a/out/EXECUTION_CONTEXT.txt
+      - name: Upload evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: gsde-p17-g49a-spot-sync-observation-evidence
+          path: g49a/out
+          if-no-files-found: error
+          retention-days: 30
