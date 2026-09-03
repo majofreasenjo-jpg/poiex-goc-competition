@@ -6,6 +6,10 @@ on:
       - gsde-ri001-g410b-mhd-custody-20260903
   workflow_dispatch:
 
+permissions:
+  contents: read
+  issues: write
+
 jobs:
   custody:
     runs-on: ubuntu-latest
@@ -36,6 +40,27 @@ jobs:
         with:
           name: g410b-mhd-custody-evidence
           path: g410b_ev/
+      - name: Publish transport diagnostic issue when process is nonzero
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          code="$(cat g410b_ev/G410B_PROCESS_EXIT_CODE.txt 2>/dev/null || echo missing)"
+          if [ "$code" != "0" ]; then
+            {
+              echo 'Frozen G4.10B custody probe transport diagnostic.'
+              echo
+              echo "Run: $GITHUB_RUN_ID"
+              echo "SHA: $GITHUB_SHA"
+              echo "Process exit code: $code"
+              echo
+              echo '```text'
+              tail -c 12000 g410b_ev/G410B_STDOUT_STDERR.txt
+              echo
+              echo '```'
+            } > g410b_ev/G410B_DIAGNOSTIC_ISSUE_BODY.md
+            gh issue create --title "G4.10B transport diagnostic run $GITHUB_RUN_ID" --body-file g410b_ev/G410B_DIAGNOSTIC_ISSUE_BODY.md
+          fi
       - name: Hard gates
         run: |
           test "$(cat g410b_ev/G410B_PROCESS_EXIT_CODE.txt)" = "0"
