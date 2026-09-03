@@ -40,13 +40,29 @@ jobs:
         with:
           name: g410b-mhd-custody-evidence
           path: g410b_ev/
-      - name: Publish transport diagnostic issue when process is nonzero
+      - name: Publish machine-readable receipt or transport diagnostic
         if: always()
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           code="$(cat g410b_ev/G410B_PROCESS_EXIT_CODE.txt 2>/dev/null || echo missing)"
-          if [ "$code" != "0" ]; then
+          if [ "$code" = "0" ] && [ -f g410b_ev/G410B_CUSTODY_RECEIPT.json ]; then
+            {
+              echo 'Frozen G4.10B custody receipt. Publication step only; scientific contract unchanged.'
+              echo
+              echo "Run: $GITHUB_RUN_ID"
+              echo "SHA: $GITHUB_SHA"
+              echo
+              echo '```json'
+              cat g410b_ev/G410B_CUSTODY_RECEIPT.json
+              echo '```'
+              echo
+              echo '```text'
+              cat g410b_ev/G410B_ADJUDICATION.txt
+              echo '```'
+            } > g410b_ev/G410B_RESULT_ISSUE_BODY.md
+            gh issue create --title "G4.10B custody receipt run $GITHUB_RUN_ID" --body-file g410b_ev/G410B_RESULT_ISSUE_BODY.md
+          elif [ "$code" != "0" ]; then
             {
               echo 'Frozen G4.10B custody probe transport diagnostic.'
               echo
