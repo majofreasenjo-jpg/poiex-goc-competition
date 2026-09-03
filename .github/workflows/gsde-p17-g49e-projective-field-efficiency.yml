@@ -1,0 +1,107 @@
+name: GSDE P17 G4.9E Projective Field Efficiency
+
+on:
+  push:
+    branches:
+      - gsde-p17-g49e-projective-field-efficiency-20260903
+    paths:
+      - 'gsde-p17/g49e_projective_field_efficiency.py'
+      - '.github/workflows/gsde-p17-g49e-projective-field-efficiency.yml'
+
+jobs:
+  projective-field-efficiency:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install numpy pandas pillow scipy scikit-image scikit-learn
+      - name: Download Spot-only NIST sources and verify hashes
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p g49e/source g49e/raw g49e/raw_unsynced g49e/g49a g49e/g49b g49e/g49c g49e/out
+          python - <<'PY'
+          from pathlib import Path
+          from urllib.request import Request,urlopen
+          from urllib.parse import quote
+          import hashlib,time
+          base='https://data.nist.gov/od/ds/mds2-2525/'
+          files={
+            '2525_README_v200.txt':'936f4c166b448f4b5a27d1e2b2465f9c2db1be073a7bffd54d45eb4259120a65',
+            'Data Synchronization Example.ipynb':'7db1c0bdf7030d2db41f247e0942af03f1aeacbc55d585d5c866793b6ab02a1f',
+            'Spot on Bare Metal_Calibrated Absorption Data.csv':'0e96b220852d762fde846e406cc44c6fc874cef22e7e41db7f4025dbcc9ca274',
+            'Spot on Bare Metal_XrayImages_Raw.zip':'9b2bf101742fb2bfd175a2e237da3b10ae4de512c3daa983133aae36eda949e3',
+          }
+          for name,expected in files.items():
+              p=Path('g49e/source')/name; url=base+quote(name); last=None
+              for attempt in range(1,6):
+                  try:
+                      req=Request(url,headers={'User-Agent':'Mozilla/5.0 GSDE scientific replay'})
+                      tmp=p.with_suffix(p.suffix+'.part')
+                      if tmp.exists(): tmp.unlink()
+                      with urlopen(req,timeout=240) as r,tmp.open('wb') as f:
+                          while True:
+                              b=r.read(1024*1024)
+                              if not b: break
+                              f.write(b)
+                      h=hashlib.sha256(tmp.read_bytes()).hexdigest()
+                      if h!=expected: raise RuntimeError(f'CHECKSUM FAIL {h} != {expected}')
+                      tmp.replace(p); last=None; break
+                  except Exception as e:
+                      last=repr(e); print('RETRY',name,attempt,last,flush=True); time.sleep(min(5*attempt,20))
+              if last is not None: raise SystemExit(f'NIST transport failed {name}: {last}')
+          PY
+      - name: Prove Scan holdout untouched
+        shell: bash
+        run: |
+          set -euo pipefail
+          if find g49e -type f -iname 'Scan on Bare Metal*' | grep -q .; then echo 'HOLDOUT BREACH' >&2; exit 9; fi
+      - name: Extract and quarantine unsynchronized raw frames
+        shell: bash
+        run: |
+          unzip -q 'g49e/source/Spot on Bare Metal_XrayImages_Raw.zip' -d g49e/raw
+          python - <<'PY'
+          from pathlib import Path
+          import re,shutil
+          root=Path('g49e/raw'); q=Path('g49e/raw_unsynced'); q.mkdir(parents=True,exist_ok=True); by={}
+          for p in root.rglob('*'):
+              if p.is_file() and p.suffix.lower() in {'.tif','.tiff'}:
+                  m=re.search(r'(\d{3})(?=\.(?:tif|tiff)$)',p.name,re.I)
+                  if m: by[int(m.group(1))]=p
+          missing=set(range(1,228))-set(by)
+          if missing: raise SystemExit(f'MISSING SYNC RAW {sorted(missing)}')
+          for n,p in list(by.items()):
+              if n>227: shutil.move(str(p),str(q/p.name))
+          PY
+      - name: Reproduce G4.9A/B/C foundations
+        run: |
+          python gsde-p17/g49a_spot_sync_observation_gate.py g49e/source g49e/g49a
+          python gsde-p17/g49b_spot_effective_domain_prereg.py g49e/source g49e/g49a g49e/g49b
+          python gsde-p17/g49c_spot_raw_geometry_ri002_v3.py g49e/raw g49e/g49a/SPOT_DEVELOPMENT_FRAME_MAP_080_227.csv g49e/g49b/SPOT_EFFECTIVE_DOMAIN_MAP.csv g49e/g49c
+          python gsde-p17/g49c_finalize_observation_gate.py g49e/g49c
+      - name: Execute G4.9E development representation-efficiency tournament
+        run: |
+          python gsde-p17/g49e_projective_field_efficiency.py g49e/g49c/SPOT_GEOMETRY_WITH_IDENTIFIED_OBSERVATION_GATE.csv g49e/g49c/RI002_BACKWARD_PREDICTOR_SAFE_KINEMATICS_SPOT.csv g49e/g49b/SPOT_EFFECTIVE_DOMAIN_MAP.csv g49e/g49c/SPOT_NOMINAL_MASKS_080_227.npz g49e/out
+      - name: Hard gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q '^G4_9E_PROJECTIVE_FIELD_EFFICIENCY=DEVELOPMENT_NEGATIVE_PROJECTIVE_TANGENT_NOT_SELECTED$' g49e/out/G49E_ADJUDICATION.txt
+          grep -q '^SPOT_ROLE=DEVELOPMENT_EXPLORATORY_ONLY$' g49e/out/G49E_ADJUDICATION.txt
+          grep -q '^NO_CONFIRMATORY_CREDIT=TRUE$' g49e/out/G49E_ADJUDICATION.txt
+          grep -q '^SCAN_HOLDOUT_DOWNLOADED=FALSE$' g49e/out/G49E_ADJUDICATION.txt
+          grep -q '^SCAN_HOLDOUT_INSPECTED=FALSE$' g49e/out/G49E_ADJUDICATION.txt
+      - name: Record execution context
+        run: |
+          { echo "GITHUB_SHA=$GITHUB_SHA"; echo "GITHUB_REF=$GITHUB_REF"; python --version; pip freeze; } > g49e/out/EXECUTION_CONTEXT.txt
+      - name: Upload evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: gsde-p17-g49e-projective-field-efficiency-evidence
+          path: g49e/out
+          if-no-files-found: error
+          retention-days: 30
