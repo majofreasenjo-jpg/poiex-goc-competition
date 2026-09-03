@@ -1,6 +1,9 @@
 name: GSDE RI001 G4.10B MHD Custody Probe
 
 on:
+  push:
+    branches:
+      - gsde-ri001-g410b-mhd-custody-20260903
   workflow_dispatch:
 
 jobs:
