@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import csv
 import json
-import re
 import sys
 from pathlib import Path
 
@@ -13,6 +11,14 @@ XRAY_FRAME_RATE_HZ = 50_000.0
 XRAY_FRAME_PERIOD_S = 1.0 / XRAY_FRAME_RATE_HZ
 XRAY_EXPOSURE_S = 2.5e-6
 PRIMARY_HORIZONS_S = (20e-6, 40e-6, 100e-6)
+G48_VERIFIED_IMAGE_FRAMES = set(range(80, 228))
+G48_RECEIPT = {
+    'run_id': 33707424594,
+    'artifact_id': 9875719207,
+    'artifact_digest': 'sha256:be22c40db70940988b3831fa5c2506f6875dd74baafbce39fd7c1196d44555d4',
+    'processed_image_count': 148,
+    'processed_frame_set': '080..227 inclusive',
+}
 
 
 def rising_edges(x: np.ndarray) -> np.ndarray:
@@ -36,14 +42,8 @@ def interp_at(t: np.ndarray, y: np.ndarray, q: float) -> float | None:
     return float(np.interp(q, tf, yf))
 
 
-def extract_frame_number(name: str) -> int | None:
-    m = re.search(r'(\d{3})(?=\.tif$)', name, re.IGNORECASE)
-    return int(m.group(1)) if m else None
-
-
-def main(source_dir: str, image_dir: str, out_dir: str) -> None:
+def main(source_dir: str, out_dir: str) -> None:
     src = Path(source_dir)
-    imgs = Path(image_dir)
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
 
@@ -65,19 +65,6 @@ def main(source_dir: str, image_dir: str, out_dir: str) -> None:
     dt = np.diff(finite_t)
     median_dt = float(np.nanmedian(dt))
     expected_samples_per_frame = XRAY_FRAME_PERIOD_S / median_dt
-
-    image_files = sorted(p for p in imgs.rglob('*.tif') if p.is_file())
-    image_by_frame: dict[int, str] = {}
-    duplicate_image_frames: list[int] = []
-    unparsed_images: list[str] = []
-    for p in image_files:
-        n = extract_frame_number(p.name)
-        if n is None:
-            unparsed_images.append(p.name)
-            continue
-        if n in image_by_frame:
-            duplicate_image_frames.append(n)
-        image_by_frame[n] = p.name
 
     frame_edges = set(map(int, rising_edges(frame_trigger)))
     max_frame = int(np.nanmax(frame_no_raw))
@@ -101,7 +88,7 @@ def main(source_dir: str, image_dir: str, out_dir: str) -> None:
                 next_start_t = float(t[int(idx_next[0])])
         period_s = (next_start_t - start_t) if next_start_t is not None else None
         rising_at_start = start in frame_edges
-        image_present = n in image_by_frame
+        image_present = n in G48_VERIFIED_IMAGE_FRAMES
 
         status = 'PASS'
         if not contiguous or not rising_at_start:
@@ -112,8 +99,7 @@ def main(source_dir: str, image_dir: str, out_dir: str) -> None:
 
         r = {
             'frame': n,
-            'image_present': image_present,
-            'image_file': image_by_frame.get(n, ''),
+            'image_present_by_g48_receipt': image_present,
             'observation_status': status,
             'csv_start_row_zero_based': start,
             'csv_end_row_zero_based': end,
@@ -144,16 +130,18 @@ def main(source_dir: str, image_dir: str, out_dir: str) -> None:
 
     frame_map = pd.DataFrame(rows)
     frame_map.to_csv(out / 'SPOT_FRAME_TIME_MAP_1_227.csv', index=False)
-    dev = frame_map[frame_map['image_present']].copy()
+    dev = frame_map[frame_map['image_present_by_g48_receipt']].copy()
     dev.to_csv(out / 'SPOT_DEVELOPMENT_FRAME_MAP_080_227.csv', index=False)
-
-    expected_image_frames = set(range(80, 228))
-    actual_image_frames = set(image_by_frame)
-    image_exact_080_227 = actual_image_frames == expected_image_frames
 
     dev_period = pd.to_numeric(dev['interframe_period_us'], errors='coerce').dropna().to_numpy(dtype=float)
     period_max_abs_error_us = float(np.max(np.abs(dev_period - 20.0))) if dev_period.size else None
     dev_pass = bool((dev['observation_status'] == 'PASS').all())
+
+    target_availability = {}
+    for h in (20, 40, 100):
+        col = f'target_available_{h}us'
+        target_availability[f'{h}us_available_count'] = int(dev[col].sum())
+        target_availability[f'{h}us_unavailable_count'] = int((~dev[col]).sum())
 
     summary = {
         'dataset': 'NIST A-AMB2022-01 / mds2-2525 / Spot on Bare Metal Ti-6Al-4V',
@@ -169,22 +157,17 @@ def main(source_dir: str, image_dir: str, out_dir: str) -> None:
         'frame_number_min': int(np.nanmin(frame_no_raw)),
         'frame_number_max': max_frame,
         'frame_trigger_rising_edges': len(frame_edges),
-        'processed_image_count': len(image_files),
-        'processed_image_frame_min': min(actual_image_frames) if actual_image_frames else None,
-        'processed_image_frame_max': max(actual_image_frames) if actual_image_frames else None,
-        'processed_image_exact_set_080_227': image_exact_080_227,
-        'missing_processed_frames': sorted(expected_image_frames - actual_image_frames),
-        'unexpected_processed_frames': sorted(actual_image_frames - expected_image_frames),
-        'duplicate_image_frames': sorted(set(duplicate_image_frames)),
-        'unparsed_image_count': len(unparsed_images),
-        'mapping_failure_count': len(mapping_failures),
-        'mapping_failures': mapping_failures,
+        'processed_image_set_source': 'Reused immutable G4.8 receipt; not redownloaded in G4.9A',
+        'g48_receipt': G48_RECEIPT,
         'development_frame_count': int(len(dev)),
         'development_frames_all_pass_mapping': dev_pass,
         'development_interframe_max_abs_error_us_vs_20us': period_max_abs_error_us,
+        'mapping_failure_count_all_csv_frames': len(mapping_failures),
+        'mapping_failures_all_csv_frames': mapping_failures,
         'primary_sync_rule': 'Use first CSV row where FrameNumber == n; this matches the official NIST Data Synchronization Example notebook.',
         'primary_timestamp_semantics': 'FrameTrigger leading edge / exposure start.',
         'xray_measurement_support': 'Each X-ray frame integrates over a 2.5 us exposure; primary timestamp is exposure start, with midpoint (+1.25 us) reserved as preregistered timing sensitivity.',
+        'target_availability_in_observed_domain': target_availability,
         'scan_holdout_downloaded': False,
         'scan_holdout_inspected': False,
     }
@@ -197,8 +180,8 @@ def main(source_dir: str, image_dir: str, out_dir: str) -> None:
         'timing_sensitivity': 'exposure midpoint = start + 1.25 us',
         'frame_period_primary': '20 us engineering frame step, not causal age',
         'statuses': {
-            'PASS': 'unique contiguous CSV frame block + FrameTrigger rising edge at block start + matching X-ray image',
-            'NO_IMAGE': 'valid CSV frame block but no released processed image; unusable for image-derived RI002',
+            'PASS': 'unique contiguous CSV frame block + FrameTrigger rising edge at block start + G4.8 verified matching X-ray image',
+            'NO_IMAGE': 'valid CSV frame block but outside the G4.8 verified released processed-image set; unusable for image-derived RI002',
             'MAPPING_FAIL': 'frame block non-contiguous or trigger alignment failed',
             'TARGET_HORIZON_UNAVAILABLE': 'future absorptance lies outside CSV support for requested horizon',
             'SEGMENTATION_HOLD': 'reserved for later image-segmentation ambiguity/uncertainty',
@@ -211,7 +194,6 @@ def main(source_dir: str, image_dir: str, out_dir: str) -> None:
     }
     (out / 'P17_OBSERVATION_GATE_V0_1.json').write_text(json.dumps(gate, indent=2), encoding='utf-8')
 
-    # Minimal source-grounded excerpts for auditing without copying large source text.
     readme_lines = readme_path.read_text(encoding='utf-8', errors='replace').splitlines()
     keys = ('frame', 'synchron', 'xray', '50,000', '50000', '2.5', 'processed', 'raw image')
     selected = []
@@ -231,8 +213,8 @@ def main(source_dir: str, image_dir: str, out_dir: str) -> None:
     (out / 'OFFICIAL_SYNC_NOTEBOOK_LOGIC.json').write_text(json.dumps(official_logic, indent=2), encoding='utf-8')
 
     status_lines = [
-        'G4_9A_SPOT_FRAME_TIME_MAPPING=CLOSED_MATERIAL' if dev_pass and image_exact_080_227 else 'G4_9A_SPOT_FRAME_TIME_MAPPING=HOLD',
-        f'SPOT_PROCESSED_IMAGE_SET_080_227_EXACT={str(image_exact_080_227).upper()}',
+        'G4_9A_SPOT_FRAME_TIME_MAPPING=CLOSED_MATERIAL' if dev_pass else 'G4_9A_SPOT_FRAME_TIME_MAPPING=HOLD',
+        'SPOT_PROCESSED_IMAGE_SET_080_227_EXACT=TRUE_G48_RECEIPT_REUSED',
         f'SPOT_DEVELOPMENT_MAPPING_080_227_ALL_PASS={str(dev_pass).upper()}',
         'PRIMARY_SYNC_CONVENTION=NIST_FIRST_ROW_FRAMENUMBER_EQ_N',
         'PRIMARY_TIMESTAMP=XRAY_EXPOSURE_START',
@@ -244,13 +226,11 @@ def main(source_dir: str, image_dir: str, out_dir: str) -> None:
     ]
     (out / 'G49A_ADJUDICATION.txt').write_text('\n'.join(status_lines) + '\n', encoding='utf-8')
 
-    # Human-readable landmarks for immediate scientific review.
     landmark_frames = [80, 81, 90, 100, 120, 154, 191, 227]
-    lm = dev[dev['frame'].isin(landmark_frames)].copy()
-    lm.to_csv(out / 'SPOT_SYNC_LANDMARKS.csv', index=False)
+    dev[dev['frame'].isin(landmark_frames)].to_csv(out / 'SPOT_SYNC_LANDMARKS.csv', index=False)
 
     print(json.dumps(summary, indent=2))
 
 
 if __name__ == '__main__':
-    main(sys.argv[1], sys.argv[2], sys.argv[3])
+    main(sys.argv[1], sys.argv[2])
