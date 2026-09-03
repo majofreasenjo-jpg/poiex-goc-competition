@@ -28,7 +28,7 @@ jobs:
           from pathlib import Path
           from urllib.request import Request, urlopen
           from urllib.parse import quote
-          import hashlib
+          import hashlib, time
 
           base = 'https://data.nist.gov/od/ds/mds2-2525/'
           files = {
@@ -37,18 +37,39 @@ jobs:
             'Spot on Bare Metal_Calibrated Absorption Data.csv': '0e96b220852d762fde846e406cc44c6fc874cef22e7e41db7f4025dbcc9ca274',
             'Spot on Bare Metal_XrayImages_processed_captioned.zip': '4d683cf48c4a15458d60dd32b759528a672ba1d6908cc537c43c9e25854c2a98',
           }
+          log=[]
           for name, expected in files.items():
               p = Path('g49a/source') / name
-              req = Request(base + quote(name), headers={'User-Agent':'Mozilla/5.0 GSDE scientific replay'})
-              with urlopen(req, timeout=120) as r, p.open('wb') as f:
-                  while True:
-                      b = r.read(1024*1024)
-                      if not b:
-                          break
-                      f.write(b)
-              h = hashlib.sha256(p.read_bytes()).hexdigest()
-              if h != expected:
-                  raise SystemExit(f'CHECKSUM FAIL {name}: {h} != {expected}')
+              url = base + quote(name)
+              last=None
+              for attempt in range(1,6):
+                  try:
+                      print(f'DOWNLOAD {name} attempt={attempt}', flush=True)
+                      req = Request(url, headers={'User-Agent':'Mozilla/5.0 GSDE scientific replay'})
+                      tmp = p.with_suffix(p.suffix + '.part')
+                      if tmp.exists(): tmp.unlink()
+                      with urlopen(req, timeout=180) as r, tmp.open('wb') as f:
+                          while True:
+                              b = r.read(1024*1024)
+                              if not b: break
+                              f.write(b)
+                      h = hashlib.sha256(tmp.read_bytes()).hexdigest()
+                      size = tmp.stat().st_size
+                      print(f'RECEIVED {name} bytes={size} sha256={h}', flush=True)
+                      if h != expected:
+                          raise RuntimeError(f'CHECKSUM FAIL {h} != {expected}')
+                      tmp.replace(p)
+                      log.append((name,size,h,attempt,url))
+                      last=None
+                      break
+                  except Exception as e:
+                      last=repr(e)
+                      print(f'RETRY {name} attempt={attempt} error={last}', flush=True)
+                      time.sleep(min(5*attempt,20))
+              if last is not None:
+                  Path('g49a/out/NIST_TRANSPORT_FAILURE.txt').write_text(f'{name}\n{last}\n', encoding='utf-8')
+                  raise SystemExit(f'NIST transport failed after retries for {name}: {last}')
+          Path('g49a/out/NIST_SPOT_CUSTODY.tsv').write_text('name\tbytes\tsha256\tattempt\turl\n' + '\n'.join('\t'.join(map(str,x)) for x in log) + '\n', encoding='utf-8')
           PY
       - name: Prove Scan holdout untouched
         shell: bash
