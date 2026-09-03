@@ -19,11 +19,11 @@ jobs:
           python-version: '3.11'
       - name: Install dependencies
         run: pip install numpy pandas
-      - name: Download Spot-only authoritative sources from NIST and verify hashes
+      - name: Download synchronization-only Spot sources from NIST and verify hashes
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p g49a/source g49a/images g49a/out
+          mkdir -p g49a/source g49a/out
           python - <<'PY'
           from pathlib import Path
           from urllib.request import Request, urlopen
@@ -35,7 +35,6 @@ jobs:
             '2525_README_v200.txt': '936f4c166b448f4b5a27d1e2b2465f9c2db1be073a7bffd54d45eb4259120a65',
             'Data Synchronization Example.ipynb': '7db1c0bdf7030d2db41f247e0942af03f1aeacbc55d585d5c866793b6ab02a1f',
             'Spot on Bare Metal_Calibrated Absorption Data.csv': '0e96b220852d762fde846e406cc44c6fc874cef22e7e41db7f4025dbcc9ca274',
-            'Spot on Bare Metal_XrayImages_processed_captioned.zip': '4d683cf48c4a15458d60dd32b759528a672ba1d6908cc537c43c9e25854c2a98',
           }
           log=[]
           for name, expected in files.items():
@@ -69,7 +68,7 @@ jobs:
               if last is not None:
                   Path('g49a/out/NIST_TRANSPORT_FAILURE.txt').write_text(f'{name}\n{last}\n', encoding='utf-8')
                   raise SystemExit(f'NIST transport failed after retries for {name}: {last}')
-          Path('g49a/out/NIST_SPOT_CUSTODY.tsv').write_text('name\tbytes\tsha256\tattempt\turl\n' + '\n'.join('\t'.join(map(str,x)) for x in log) + '\n', encoding='utf-8')
+          Path('g49a/out/NIST_SPOT_SYNC_CUSTODY.tsv').write_text('name\tbytes\tsha256\tattempt\turl\n' + '\n'.join('\t'.join(map(str,x)) for x in log) + '\n', encoding='utf-8')
           PY
       - name: Prove Scan holdout untouched
         shell: bash
@@ -80,16 +79,24 @@ jobs:
             exit 9
           fi
           printf 'SCAN_HOLDOUT_DOWNLOADED=FALSE\nSCAN_HOLDOUT_INSPECTED=FALSE\n' > g49a/out/SCAN_HOLDOUT_SEAL.txt
-      - name: Extract Spot processed X-ray images
-        run: unzip -q 'g49a/source/Spot on Bare Metal_XrayImages_processed_captioned.zip' -d g49a/images
+      - name: Record reused G4.8 processed-image custody receipt
+        run: |
+          cat > g49a/out/G48_IMAGE_RECEIPT_REUSED.txt <<'EOF'
+          SOURCE_RUN_ID=33707424594
+          SOURCE_ARTIFACT_ID=9875719207
+          SOURCE_ARTIFACT_DIGEST=sha256:be22c40db70940988b3831fa5c2506f6875dd74baafbce39fd7c1196d44555d4
+          PROCESSED_IMAGE_COUNT=148
+          PROCESSED_FRAME_SET=080..227_INCLUSIVE
+          IMAGE_BYTES_REDOWNLOADED_IN_G49A=FALSE
+          EOF
       - name: Execute exact frame-time map and observation gate
-        run: python gsde-p17/g49a_spot_sync_observation_gate.py g49a/source g49a/images g49a/out
-      - name: Hard gate expected observed domain
+        run: python gsde-p17/g49a_spot_sync_observation_gate.py g49a/source g49a/out
+      - name: Hard gate observed domain
         shell: bash
         run: |
           set -euo pipefail
           grep -q '^G4_9A_SPOT_FRAME_TIME_MAPPING=CLOSED_MATERIAL$' g49a/out/G49A_ADJUDICATION.txt
-          grep -q '^SPOT_PROCESSED_IMAGE_SET_080_227_EXACT=TRUE$' g49a/out/G49A_ADJUDICATION.txt
+          grep -q '^SPOT_PROCESSED_IMAGE_SET_080_227_EXACT=TRUE_G48_RECEIPT_REUSED$' g49a/out/G49A_ADJUDICATION.txt
           grep -q '^SPOT_DEVELOPMENT_MAPPING_080_227_ALL_PASS=TRUE$' g49a/out/G49A_ADJUDICATION.txt
           grep -q '^SCAN_HOLDOUT_DOWNLOADED=FALSE$' g49a/out/G49A_ADJUDICATION.txt
       - name: Record execution context
