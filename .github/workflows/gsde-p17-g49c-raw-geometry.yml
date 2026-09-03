@@ -25,7 +25,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p g49c/source g49c/raw g49c/g49a g49c/g49b g49c/out
+          mkdir -p g49c/source g49c/raw g49c/raw_unsynced g49c/g49a g49c/g49b g49c/out
           python - <<'PY'
           from pathlib import Path
           from urllib.request import Request, urlopen
@@ -69,18 +69,63 @@ jobs:
           printf 'SCAN_HOLDOUT_DOWNLOADED=FALSE\nSCAN_HOLDOUT_INSPECTED=FALSE\n' > g49c/out/SCAN_HOLDOUT_SEAL.txt
       - name: Extract raw Spot X-rays
         run: unzip -q 'g49c/source/Spot on Bare Metal_XrayImages_Raw.zip' -d g49c/raw
+      - name: Inventory and partition unsynchronized raw frames
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import json,re,shutil
+          root=Path('g49c/raw'); quarantine=Path('g49c/raw_unsynced'); quarantine.mkdir(parents=True,exist_ok=True)
+          rows=[]; by={}; unparsed=[]
+          for p in sorted(root.rglob('*')):
+              if not p.is_file() or p.suffix.lower() not in {'.tif','.tiff'}: continue
+              m=re.search(r'(\d{3})(?=\.(?:tif|tiff)$)',p.name,re.I)
+              if not m:
+                  unparsed.append(str(p.relative_to(root))); continue
+              n=int(m.group(1)); rows.append((n,str(p.relative_to(root))))
+              by.setdefault(n,[]).append(p)
+          frames=sorted(by)
+          dup={n:[str(x.relative_to(root)) for x in ps] for n,ps in by.items() if len(ps)>1}
+          sync=set(range(1,228)); actual=set(frames)
+          if not sync.issubset(actual): raise SystemExit(f'MISSING SYNCHRONIZED RAW FRAMES {sorted(sync-actual)}')
+          if dup: raise SystemExit(f'DUPLICATE RAW FRAME IDS {dup}')
+          extras=sorted(actual-sync)
+          for n in extras:
+              p=by[n][0]; dest=quarantine/p.name; shutil.move(str(p),str(dest))
+          summary={
+            'raw_archive_frame_min':min(frames),'raw_archive_frame_max':max(frames),'raw_archive_frame_count':len(frames),
+            'synchronized_frame_min':1,'synchronized_frame_max':227,'synchronized_frame_count':227,
+            'unsynchronized_extra_frame_count':len(extras),'unsynchronized_extra_first':extras[0] if extras else None,
+            'unsynchronized_extra_last':extras[-1] if extras else None,'unsynchronized_extra_frames':extras,
+            'unparsed_file_count':len(unparsed),'duplicate_frame_id_count':len(dup),
+            'firewalls':['RAW_ARCHIVE_DOMAIN != SYNCHRONIZED_OBSERVATION_DOMAIN','UNSYNCHRONIZED_RAW_FRAME != RI002_INPUT','NO_TEMPORAL_ANCHOR => NO_EMPIRICAL_CREDIT']
+          }
+          Path('g49c/out/RAW_ARCHIVE_DOMAIN_INVENTORY.json').write_text(json.dumps(summary,indent=2),encoding='utf-8')
+          Path('g49c/out/RAW_ARCHIVE_FRAME_INVENTORY.tsv').write_text('frame\tpath\n'+'\n'.join(f'{n}\t{path}' for n,path in rows)+'\n',encoding='utf-8')
+          print(json.dumps(summary,indent=2))
+          PY
       - name: Reproduce G4.9A exact mapping
         run: python gsde-p17/g49a_spot_sync_observation_gate.py g49c/source g49c/g49a
       - name: Reproduce G4.9B calibrated effective domain
         run: python gsde-p17/g49b_spot_effective_domain_prereg.py g49c/source g49c/g49a g49c/g49b
       - name: Execute G4.9C raw geometry and RI002 kinematics
         run: python gsde-p17/g49c_spot_raw_geometry_ri002.py g49c/raw g49c/g49a/SPOT_DEVELOPMENT_FRAME_MAP_080_227.csv g49c/g49b/SPOT_EFFECTIVE_DOMAIN_MAP.csv g49c/out
+      - name: Bind archive-domain firewall into adjudication
+        shell: bash
+        run: |
+          {
+            echo 'RAW_ARCHIVE_DOMAIN != SYNCHRONIZED_OBSERVATION_DOMAIN'
+            echo 'UNSYNCHRONIZED_RAW_FRAMES_228_451=QUARANTINED_NO_RI002_CREDIT'
+            echo 'NO_TEMPORAL_ANCHOR => NO_EMPIRICAL_CREDIT'
+          } >> g49c/out/G49C_ADJUDICATION.txt
       - name: Hard gates
         shell: bash
         run: |
           set -euo pipefail
           grep -q '^G4_9C_SPOT_RAW_CUSTODY=PASS$' g49c/out/G49C_ADJUDICATION.txt
           grep -q '^SPOT_RAW_FRAME_COVERAGE_001_227_EXACT=TRUE$' g49c/out/G49C_ADJUDICATION.txt
+          grep -q '^UNSYNCHRONIZED_RAW_FRAMES_228_451=QUARANTINED_NO_RI002_CREDIT$' g49c/out/G49C_ADJUDICATION.txt
           grep -q '^SCAN_HOLDOUT_DOWNLOADED=FALSE$' g49c/out/G49C_ADJUDICATION.txt
           grep -q '^EMPIRICAL_BENCHMARK_EXECUTED=FALSE$' g49c/out/G49C_ADJUDICATION.txt
       - name: Record execution context
