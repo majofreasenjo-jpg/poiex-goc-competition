@@ -1,0 +1,84 @@
+name: GSDE P17 G4.8 AMBench Spot Custody
+
+on:
+  push:
+    branches:
+      - gsde-p17-g48-ambench-20260902
+    paths:
+      - 'gsde-p17/**'
+      - '.github/workflows/gsde-p17-g48-ambench.yml'
+
+jobs:
+  spot-custody-structure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install analysis dependencies
+        run: pip install numpy pandas pillow
+      - name: Download development-only Spot sources from NIST
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p g48/source g48/images g48/out
+          python - <<'PY'
+          from pathlib import Path
+          from urllib.request import Request, urlopen
+          import hashlib
+          from urllib.parse import quote
+
+          base = 'https://data.nist.gov/od/ds/mds2-2525/'
+          files = {
+            '2525_README_v200.txt': '936f4c166b448f4b5a27d1e2b2465f9c2db1be073a7bffd54d45eb4259120a65',
+            'Data Synchronization Example.ipynb': '7db1c0bdf7030d2db41f247e0942af03f1aeacbc55d585d5c866793b6ab02a1f',
+            'Spot on Bare Metal_Calibrated Absorption Data.csv': '0e96b220852d762fde846e406cc44c6fc874cef22e7e41db7f4025dbcc9ca274',
+            'Spot on Bare Metal_XrayImages_processed_captioned.zip': '4d683cf48c4a15458d60dd32b759528a672ba1d6908cc537c43c9e25854c2a98',
+          }
+          out = Path('g48/source')
+          manifest = []
+          for name, expected in files.items():
+              url = base + quote(name)
+              p = out / name
+              req = Request(url, headers={'User-Agent':'Mozilla/5.0 GSDE scientific replay'})
+              with urlopen(req, timeout=120) as r, p.open('wb') as f:
+                  while True:
+                      b = r.read(1024*1024)
+                      if not b: break
+                      f.write(b)
+              h = hashlib.sha256(p.read_bytes()).hexdigest()
+              if h != expected:
+                  raise SystemExit(f'CHECKSUM FAIL {name}: {h} != {expected}')
+              manifest.append((name, p.stat().st_size, h, url))
+          Path('g48/out/OFFICIAL_SPOT_SOURCE_MANIFEST.tsv').write_text(
+              'name\tbytes\tsha256\turl\n' + '\n'.join('\t'.join(map(str,x)) for x in manifest) + '\n', encoding='utf-8')
+          PY
+      - name: Prove Scan holdout is untouched
+        run: |
+          set -euo pipefail
+          if find g48 -type f -iname 'Scan on Bare Metal*' | grep -q .; then
+            echo 'HOLDOUT BREACH: Scan file materialized' >&2
+            exit 9
+          fi
+          printf 'SCAN_HOLDOUT_DOWNLOADED=FALSE\nSCAN_HOLDOUT_INSPECTED=FALSE\n' > g48/out/SCAN_HOLDOUT_SEAL.txt
+      - name: Extract Spot processed X-ray images
+        run: unzip -q 'g48/source/Spot on Bare Metal_XrayImages_processed_captioned.zip' -d g48/images
+      - name: Run custody and structure audit
+        run: python gsde-p17/g48_spot_custody_and_structure.py g48/source g48/images g48/out
+      - name: Record immutable execution context
+        run: |
+          {
+            echo "GITHUB_SHA=$GITHUB_SHA"
+            echo "GITHUB_REF=$GITHUB_REF"
+            python --version
+            pip freeze
+          } > g48/out/EXECUTION_CONTEXT.txt
+      - name: Upload evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: gsde-p17-g48-spot-custody-structure-evidence
+          path: g48/out
+          if-no-files-found: error
+          retention-days: 30
