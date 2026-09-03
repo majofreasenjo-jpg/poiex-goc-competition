@@ -1,0 +1,33 @@
+name: GSDE RI001 G4.10B MHD Custody Probe
+
+on:
+  workflow_dispatch:
+
+jobs:
+  custody:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install numpy pandas requests
+      - name: Execute frozen custody probe
+        run: python gsde-ri001/g410b_mhd_custody_probe.py g410b_ev
+      - name: Hard gates
+        run: |
+          grep -q 'G4_10B_MHD_CUSTODY_PROBE=PASS_CUSTODY_NO_SCORING' g410b_ev/G410B_ADJUDICATION.txt
+          grep -q 'VELOCITY_GRADIENT_CUSTODY=PASS' g410b_ev/G410B_ADJUDICATION.txt
+          grep -q 'MAGNETIC_GRADIENT_CUSTODY=PASS' g410b_ev/G410B_ADJUDICATION.txt
+          grep -q 'Q_INDUCTION_TARGET_NATIVE_RECONSTRUCTIBLE=TRUE' g410b_ev/G410B_ADJUDICATION.txt
+          grep -q 'SCORING_PERFORMED=FALSE' g410b_ev/G410B_ADJUDICATION.txt
+          grep -q 'EMPIRICAL_CREDIT=0' g410b_ev/G410B_ADJUDICATION.txt
+      - name: Execution context
+        run: |
+          printf 'sha=%s\nrun_id=%s\nrun_attempt=%s\n' "$GITHUB_SHA" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" > g410b_ev/G410B_EXECUTION_CONTEXT.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: g410b-mhd-custody-evidence
+          path: g410b_ev/
