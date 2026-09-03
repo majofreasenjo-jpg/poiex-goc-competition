@@ -8,6 +8,7 @@ on:
       - 'gsde-p17/g49a_spot_sync_observation_gate.py'
       - 'gsde-p17/g49b_spot_effective_domain_prereg.py'
       - 'gsde-p17/g49c_spot_raw_geometry_ri002.py'
+      - 'gsde-p17/g49c_spot_raw_geometry_ri002_v2.py'
       - '.github/workflows/gsde-p17-g49c-raw-geometry.yml'
 
 jobs:
@@ -85,22 +86,14 @@ jobs:
                   unparsed.append(str(p.relative_to(root))); continue
               n=int(m.group(1)); rows.append((n,str(p.relative_to(root))))
               by.setdefault(n,[]).append(p)
-          frames=sorted(by)
-          dup={n:[str(x.relative_to(root)) for x in ps] for n,ps in by.items() if len(ps)>1}
+          frames=sorted(by); dup={n:[str(x.relative_to(root)) for x in ps] for n,ps in by.items() if len(ps)>1}
           sync=set(range(1,228)); actual=set(frames)
           if not sync.issubset(actual): raise SystemExit(f'MISSING SYNCHRONIZED RAW FRAMES {sorted(sync-actual)}')
           if dup: raise SystemExit(f'DUPLICATE RAW FRAME IDS {dup}')
           extras=sorted(actual-sync)
           for n in extras:
-              p=by[n][0]; dest=quarantine/p.name; shutil.move(str(p),str(dest))
-          summary={
-            'raw_archive_frame_min':min(frames),'raw_archive_frame_max':max(frames),'raw_archive_frame_count':len(frames),
-            'synchronized_frame_min':1,'synchronized_frame_max':227,'synchronized_frame_count':227,
-            'unsynchronized_extra_frame_count':len(extras),'unsynchronized_extra_first':extras[0] if extras else None,
-            'unsynchronized_extra_last':extras[-1] if extras else None,'unsynchronized_extra_frames':extras,
-            'unparsed_file_count':len(unparsed),'duplicate_frame_id_count':len(dup),
-            'firewalls':['RAW_ARCHIVE_DOMAIN != SYNCHRONIZED_OBSERVATION_DOMAIN','UNSYNCHRONIZED_RAW_FRAME != RI002_INPUT','NO_TEMPORAL_ANCHOR => NO_EMPIRICAL_CREDIT']
-          }
+              p=by[n][0]; shutil.move(str(p),str(quarantine/p.name))
+          summary={'raw_archive_frame_min':min(frames),'raw_archive_frame_max':max(frames),'raw_archive_frame_count':len(frames),'synchronized_frame_min':1,'synchronized_frame_max':227,'synchronized_frame_count':227,'unsynchronized_extra_frame_count':len(extras),'unsynchronized_extra_first':extras[0] if extras else None,'unsynchronized_extra_last':extras[-1] if extras else None,'unsynchronized_extra_frames':extras,'unparsed_file_count':len(unparsed),'duplicate_frame_id_count':len(dup),'firewalls':['RAW_ARCHIVE_DOMAIN != SYNCHRONIZED_OBSERVATION_DOMAIN','UNSYNCHRONIZED_RAW_FRAME != RI002_INPUT','NO_TEMPORAL_ANCHOR => NO_EMPIRICAL_CREDIT']}
           Path('g49c/out/RAW_ARCHIVE_DOMAIN_INVENTORY.json').write_text(json.dumps(summary,indent=2),encoding='utf-8')
           Path('g49c/out/RAW_ARCHIVE_FRAME_INVENTORY.tsv').write_text('frame\tpath\n'+'\n'.join(f'{n}\t{path}' for n,path in rows)+'\n',encoding='utf-8')
           print(json.dumps(summary,indent=2))
@@ -109,8 +102,8 @@ jobs:
         run: python gsde-p17/g49a_spot_sync_observation_gate.py g49c/source g49c/g49a
       - name: Reproduce G4.9B calibrated effective domain
         run: python gsde-p17/g49b_spot_effective_domain_prereg.py g49c/source g49c/g49a g49c/g49b
-      - name: Execute G4.9C raw geometry and RI002 kinematics
-        run: python gsde-p17/g49c_spot_raw_geometry_ri002.py g49c/raw g49c/g49a/SPOT_DEVELOPMENT_FRAME_MAP_080_227.csv g49c/g49b/SPOT_EFFECTIVE_DOMAIN_MAP.csv g49c/out
+      - name: Execute G4.9C v2 raw geometry and RI002 kinematics
+        run: python gsde-p17/g49c_spot_raw_geometry_ri002_v2.py g49c/raw g49c/g49a/SPOT_DEVELOPMENT_FRAME_MAP_080_227.csv g49c/g49b/SPOT_EFFECTIVE_DOMAIN_MAP.csv g49c/out
       - name: Bind archive-domain firewall into adjudication
         shell: bash
         run: |
@@ -125,6 +118,8 @@ jobs:
           set -euo pipefail
           grep -q '^G4_9C_SPOT_RAW_CUSTODY=PASS$' g49c/out/G49C_ADJUDICATION.txt
           grep -q '^SPOT_RAW_FRAME_COVERAGE_001_227_EXACT=TRUE$' g49c/out/G49C_ADJUDICATION.txt
+          grep -q '^SURFACE_ESTIMATOR_V1=REJECTED_QA$' g49c/out/G49C_ADJUDICATION.txt
+          grep -q '^SURFACE_ESTIMATOR_V2=PRELASER_RADIographic_OTSU_CROSSING$' g49c/out/G49C_ADJUDICATION.txt
           grep -q '^UNSYNCHRONIZED_RAW_FRAMES_228_451=QUARANTINED_NO_RI002_CREDIT$' g49c/out/G49C_ADJUDICATION.txt
           grep -q '^SCAN_HOLDOUT_DOWNLOADED=FALSE$' g49c/out/G49C_ADJUDICATION.txt
           grep -q '^EMPIRICAL_BENCHMARK_EXECUTED=FALSE$' g49c/out/G49C_ADJUDICATION.txt
@@ -139,7 +134,7 @@ jobs:
       - name: Upload evidence
         uses: actions/upload-artifact@v4
         with:
-          name: gsde-p17-g49c-raw-geometry-evidence
+          name: gsde-p17-g49c-v2-raw-geometry-evidence
           path: g49c/out
           if-no-files-found: error
           retention-days: 30
