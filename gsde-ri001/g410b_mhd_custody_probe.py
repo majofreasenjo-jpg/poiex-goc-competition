@@ -7,7 +7,6 @@ import pandas as pd
 import requests
 
 ENDPOINT = 'https://turbulence.pha.jhu.edu/service/turbulence.asmx'
-SOAP_ACTION = 'http://turbulence.pha.jhu.edu/GetData_Python'
 NS = 'http://turbulence.pha.jhu.edu/'
 DATASET = 'mhd1024'
 TIME = 1.0
@@ -20,22 +19,25 @@ REL_RMS_TOL = 1.0e-2
 
 
 def soap_query(function_name: str, points: list[tuple[float,float,float]], spatial: str, components: int, token: str) -> np.ndarray:
+    # Transport-only implementation of the current direct JHTDB ASMX operations.
+    # Scientific contract (dataset/time/points/interpolation/tolerances) is unchanged.
     point_xml = ''.join(
-        '<ArrayOfFloat>' + ''.join(f'<float>{v:.17g}</float>' for v in p) + '</ArrayOfFloat>'
+        f'<Point3><x>{p[0]:.17g}</x><y>{p[1]:.17g}</y><z>{p[2]:.17g}</z></Point3>'
         for p in points
     )
+    action = f'{NS}{function_name}'
     body = f'''<?xml version="1.0" encoding="utf-8"?>
 <soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
   <soap:Body>
-    <GetData_Python xmlns="{NS}">
-      <function_name>{function_name}</function_name>
+    <{function_name} xmlns="{NS}">
       <authToken>{token}</authToken>
       <dataset>{DATASET}</dataset>
       <time>{TIME:.17g}</time>
       <spatialInterpolation>{spatial}</spatialInterpolation>
       <temporalInterpolation>None</temporalInterpolation>
       <points>{point_xml}</points>
-    </GetData_Python>
+      <addr>GMATIVE-GSDE-G4.10B</addr>
+    </{function_name}>
   </soap:Body>
 </soap:Envelope>'''
     last = None
@@ -44,28 +46,45 @@ def soap_query(function_name: str, points: list[tuple[float,float,float]], spati
             r = requests.post(
                 ENDPOINT,
                 data=body.encode('utf-8'),
-                headers={'Content-Type':'text/xml; charset=utf-8','SOAPAction':f'"{SOAP_ACTION}"','User-Agent':'GMATIVE-GSDE-G4.10B-custody-probe'},
+                headers={'Content-Type':'text/xml; charset=utf-8','SOAPAction':f'"{action}"','User-Agent':'GMATIVE-GSDE-G4.10B-custody-probe'},
                 timeout=120,
             )
-            r.raise_for_status()
+            if r.status_code >= 400:
+                snippet = r.text[:2000].replace('\n',' ')
+                raise RuntimeError(f'HTTP {r.status_code}: {snippet}')
             root = ET.fromstring(r.content)
             fault = root.find('.//{http://schemas.xmlsoap.org/soap/envelope/}Fault')
             if fault is not None:
                 raise RuntimeError('SOAP fault: ' + ' '.join(t.strip() for t in fault.itertext() if t.strip()))
-            vals = [float(x.text) for x in root.findall(f'.//{{{NS}}}GetData_PythonResult/{{{NS}}}float')]
-            if len(vals) != len(points) * components:
-                # Some ASMX serializers emit result floats without the service namespace.
-                vals = [float(x.text) for x in root.findall('.//GetData_PythonResult/float')]
-            if len(vals) != len(points) * components:
-                raise RuntimeError(f'{function_name}: expected {len(points)*components} floats, got {len(vals)}')
-            arr = np.asarray(vals, dtype=np.float64).reshape(len(points), components)
+            result = root.find(f'.//{{{NS}}}{function_name}Result')
+            if result is None:
+                for node in root.iter():
+                    if node.tag.split('}')[-1] == f'{function_name}Result':
+                        result = node
+                        break
+            if result is None:
+                raise RuntimeError(f'{function_name}: result element missing')
+            vals=[]
+            for leaf in result.iter():
+                if len(list(leaf)) == 0 and leaf.text is not None:
+                    txt=leaf.text.strip()
+                    try:
+                        vals.append(float(txt))
+                    except ValueError:
+                        pass
+            expected=len(points)*components
+            if len(vals) != expected:
+                tags=[node.tag.split('}')[-1] for node in result.iter()]
+                raise RuntimeError(f'{function_name}: expected {expected} numeric leaves, got {len(vals)}; tags={tags[:80]}')
+            arr=np.asarray(vals,dtype=np.float64).reshape(len(points),components)
             if not np.isfinite(arr).all():
                 raise RuntimeError(f'{function_name}: non-finite values')
+            print(f'TRANSPORT_PASS function={function_name} points={len(points)} components={components}', flush=True)
             return arr
         except Exception as e:
-            last = repr(e)
+            last=repr(e)
             print(f'RETRY {function_name} attempt={attempt} error={last}', flush=True)
-            time.sleep(min(3*attempt, 9))
+            time.sleep(min(3*attempt,9))
     raise RuntimeError(f'{function_name} failed after retries: {last}')
 
 
@@ -91,7 +110,6 @@ def stencil_catalog():
 
 
 def fd4_from_catalog(values_by_idx: dict[tuple[int,int,int],np.ndarray], a: tuple[int,int,int]) -> np.ndarray:
-    # rows = vector component, cols = spatial derivative x/y/z
     g=np.zeros((3,3),dtype=np.float64)
     for axis in range(3):
         def v(off):
@@ -126,13 +144,12 @@ def main(out_dir: str):
     u_by={e['idx']:u_all[i] for i,e in enumerate(catalog)}
     b_by={e['idx']:b_all[i] for i,e in enumerate(catalog)}
     rows=[]; operator_rows=[]
-    all_u_abs=[]; all_b_abs=[]; all_u_ref=[]; all_b_ref=[]
+    all_u_abs=[]; all_b_abs=[]
     for ai,a in enumerate(ANCHORS):
         gu_loc=fd4_from_catalog(u_by,a); gb_loc=fd4_from_catalog(b_by,a)
         gu_srv=unpack_service_grad(gu_srv_raw[ai]); gb_srv=unpack_service_grad(gb_srv_raw[ai])
         du=gu_srv-gu_loc; db=gb_srv-gb_loc
         all_u_abs.extend(np.abs(du).ravel()); all_b_abs.extend(np.abs(db).ravel())
-        all_u_ref.extend(gu_srv.ravel()); all_b_ref.extend(gb_srv.ravel())
         uc=u_by[a]; bc=b_by[a]
         q_bu=gu_srv @ bc
         q_ub=gb_srv @ uc
@@ -160,8 +177,6 @@ def main(out_dir: str):
     pd.DataFrame(rawrows).to_csv(out/'G410B_FROZEN_POINT_FIELD_VALUES.csv',index=False)
 
     u_max=float(np.max(all_u_abs)); b_max=float(np.max(all_b_abs))
-    u_srv=np.asarray(all_u_ref); b_srv=np.asarray(all_b_ref)
-    # Rebuild local arrays in the same row order from comparison table for relative RMS.
     u_cmp=comp[comp.field=='u']; b_cmp=comp[comp.field=='B']
     u_rel=rel_rms(u_cmp.service_fd4.to_numpy(),u_cmp.local_fd4.to_numpy())
     b_rel=rel_rms(b_cmp.service_fd4.to_numpy(),b_cmp.local_fd4.to_numpy())
@@ -172,15 +187,15 @@ def main(out_dir: str):
     receipt={
         'status':status,'dataset':DATASET,'time':TIME,'grid_n':N,'dx':DX,'anchors':ANCHORS,
         'unique_field_query_points':len(pts),'public_testing_token_used':token==TEST_TOKEN,
-        'velocity_gradient_max_abs_error':u_max,'magnetic_gradient_max_abs_error':b_max,
-        'velocity_gradient_relative_rms_error':u_rel,'magnetic_gradient_relative_rms_error':b_rel,
-        'max_abs_tolerance':MAX_ABS_TOL,'relative_rms_tolerance':REL_RMS_TOL,
-        'nondegenerate_Q_induction_anchors':nondeg,
+        'transport_contract':'DIRECT_ASMX_OPERATIONS_POINT3','velocity_gradient_max_abs_error':u_max,
+        'magnetic_gradient_max_abs_error':b_max,'velocity_gradient_relative_rms_error':u_rel,
+        'magnetic_gradient_relative_rms_error':b_rel,'max_abs_tolerance':MAX_ABS_TOL,
+        'relative_rms_tolerance':REL_RMS_TOL,'nondegenerate_Q_induction_anchors':nondeg,
         'max_abs_div_u_service':float(np.max(np.abs(op.div_u_service))),
         'max_abs_div_B_service':float(np.max(np.abs(op.div_B_service))),
+        'q_induction_norms':[float(v) for v in op.Q_induction_norm],
         'scoring_performed':False,'future_time_access':False,'random_cv_used':False,
-        'sensor_only_proxy_used':False,'scan_holdout_accessed':False,
-        'empirical_credit':0,
+        'sensor_only_proxy_used':False,'scan_holdout_accessed':False,'empirical_credit':0,
         'claim_ceiling':'Data/derivative custody and target-native operator reconstructibility only; no predictive scoring; no incremental-value claim.'
     }
     (out/'G410B_CUSTODY_RECEIPT.json').write_text(json.dumps(receipt,indent=2),encoding='utf-8')
