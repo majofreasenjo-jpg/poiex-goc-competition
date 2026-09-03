@@ -36,7 +36,6 @@ jobs:
             '2525_README_v200.txt':'936f4c166b448f4b5a27d1e2b2465f9c2db1be073a7bffd54d45eb4259120a65',
             'Data Synchronization Example.ipynb':'7db1c0bdf7030d2db41f247e0942af03f1aeacbc55d585d5c866793b6ab02a1f',
             'Spot on Bare Metal_Calibrated Absorption Data.csv':'0e96b220852d762fde846e406cc44c6fc874cef22e7e41db7f4025dbcc9ca274',
-            'Spot on Bare Metal_XrayImages_processed_captioned.zip':'4d683cf48c4a15458d60dd32b759528a672ba1d6908cc537c43c9e25854c2a98',
             'Spot on Bare Metal_XrayImages_Raw.zip':'9b2bf101742fb2bfd175a2e237da3b10ae4de512c3daa983133aae36eda949e3',
           }
           log=[]
@@ -71,9 +70,7 @@ jobs:
       - name: Extract raw Spot X-rays
         run: unzip -q 'g49c/source/Spot on Bare Metal_XrayImages_Raw.zip' -d g49c/raw
       - name: Reproduce G4.9A exact mapping
-        run: |
-          unzip -q 'g49c/source/Spot on Bare Metal_XrayImages_processed_captioned.zip' -d g49c/processed
-          python gsde-p17/g49a_spot_sync_observation_gate.py g49c/source g49c/processed g49c/g49a
+        run: python gsde-p17/g49a_spot_sync_observation_gate.py g49c/source g49c/g49a
       - name: Reproduce G4.9B calibrated effective domain
         run: python gsde-p17/g49b_spot_effective_domain_prereg.py g49c/source g49c/g49a g49c/g49b
       - name: Execute G4.9C raw geometry and RI002 kinematics
